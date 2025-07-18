@@ -44,7 +44,7 @@ def main():
                 result = agent.tool_map[tool_name].call(**args)
                 speak(result)
             else:
-                speak("Sorry, I couldn't understand your request.")
+                speak("It's not available")
             print("\n")
 
     asyncio.run(agent_loop())

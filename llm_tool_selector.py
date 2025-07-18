@@ -21,6 +21,12 @@ Given a user request, output a JSON object with:
 User request: "{user_text}"
 Output:
 """
+    
+    # ############
+    # print(prompt)
+    # return None, {}
+    # ############
+
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",

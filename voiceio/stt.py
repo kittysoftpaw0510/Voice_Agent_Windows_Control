@@ -3,10 +3,10 @@ import numpy as np
 import pyaudio
 import noisereduce as nr
 import webrtcvad
-from faster_whisper import WhisperModel
+from voiceio.asr_fwhisper import ASR_FWhisper
 
 class MicrophoneSTT:
-    def __init__(self, sample_rate=16000, chunk_size=1024, model_size="medium", device="cpu"):
+    def __init__(self, sample_rate=16000, chunk_size=1024, model_size="small", device="cpu"):
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
         self.model_size = model_size
@@ -40,8 +40,7 @@ class MicrophoneSTT:
         self.frame_size = int(self.sample_rate * self.frame_duration / 1000)
 
     def _init_asr(self):
-        compute_type = "float16" if self.device == "cuda" else "int8"
-        self.whisper_model = WhisperModel(self.model_size, device=self.device, compute_type=compute_type)
+        self.asr = ASR_FWhisper(sample_rate=self.sample_rate, model_size=self.model_size, device=self.device)
 
     def _is_speech(self, chunk):
         if len(chunk) < self.frame_size:
@@ -58,7 +57,6 @@ class MicrophoneSTT:
             max_val = np.max(np.abs(audio))
             if max_val > 0:
                 audio = audio / max_val * 0.95
-            # High-pass filter
             from scipy import signal
             b, a = signal.butter(4, 80/(self.sample_rate/2), btype='high')
             audio = signal.filtfilt(b, a, audio)
@@ -85,27 +83,8 @@ class MicrophoneSTT:
             elif buffer:
                 # End of speech, process buffer
                 audio = np.array(buffer, dtype=np.int16)
-                processed_audio = self._preprocess_audio(audio)
-                segments, info = self.whisper_model.transcribe(
-                    processed_audio,
-                    language="en",
-                    beam_size=5,
-                    best_of=5,
-                    temperature=0.0,
-                    condition_on_previous_text=True,
-                    vad_filter=True,
-                    vad_parameters=dict(
-                        min_silence_duration_ms=300,
-                        speech_pad_ms=100,
-                        threshold=0.5
-                    ),
-                    word_timestamps=True,
-                    compression_ratio_threshold=2.4,
-                    log_prob_threshold=-1.0,
-                    no_speech_threshold=0.7
-                )
-                results = [segment.text.strip() for segment in segments if segment.text.strip()]
-                text = " ".join(results).strip()
+                # Use ASR_FWhisper for transcription
+                text = self.asr.transcribe(audio)
                 if text:
                     self.transcript = text
                 buffer = []

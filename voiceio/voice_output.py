@@ -1,8 +1,8 @@
 import pyttsx3
 
-tts_engine = pyttsx3.init()
-
 def speak(text):
     print(f"[Agent]: {text}")
-    tts_engine.say(text)
-    tts_engine.runAndWait() 
+    engine = pyttsx3.init()
+    engine.say(text)
+    engine.runAndWait()
+    engine.stop() 

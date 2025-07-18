@@ -1,7 +1,21 @@
 from voiceio.stt import MicrophoneSTT
 import time
+from tools import get_tool_list
+from rapidfuzz import process, fuzz
 
-def listen_for_command(model_size="medium", device="cpu", silence_duration=0.7):
+def fuzzy_correct_command(transcript, threshold=80):
+    tool_list = get_tool_list()
+    candidates = []
+    for tool in tool_list:
+        candidates.append(tool['name'].replace('_', ' '))
+        if tool['description']:
+            candidates.append(tool['description'])
+    match, score, _ = process.extractOne(transcript, candidates, scorer=fuzz.token_sort_ratio)
+    if score >= threshold:
+        return match
+    return transcript
+
+def listen_for_command(model_size="tiny", device="cpu", silence_duration=0.7):
     """
     Listen for a voice command using the MicrophoneSTT class.
     Returns only after the speaker has stopped speaking for `silence_duration` seconds.
@@ -26,4 +40,7 @@ def listen_for_command(model_size="medium", device="cpu", silence_duration=0.7):
         time.sleep(frame_duration)
     stt.stop()
     print(f"[Heard]: {prev_transcript}")
-    return prev_transcript 
+    corrected = fuzzy_correct_command(prev_transcript)
+    if corrected != prev_transcript:
+        print(f"[Corrected]: {corrected}")
+    return corrected 
